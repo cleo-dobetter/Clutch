@@ -312,17 +312,6 @@
     let isAnimating = false; 
     let currentGameMode = "standard";
 
-    // --- Audio System ---
-    const bgMusic = new Audio('sounds/background.mp3');
-    bgMusic.loop = true;
-    bgMusic.volume = 0.4; // Slightly lower volume so it doesn't drown out the sound effects
-
-    function playCardSound() {
-        // Creating a new instance each time allows the sound to overlap cleanly if multiple cards are played fast
-        const cardSfx = new Audio('sounds/playingcard.mp3');
-        cardSfx.play().catch(e => console.log("Sound effect blocked by browser:", e));
-    }
-
     // --- Local Storage Stats ---
     let wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
     let losses = localStorage.getItem('clutch_losses') ? parseInt(localStorage.getItem('clutch_losses')) : 0;
@@ -355,10 +344,6 @@
         currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'flex';
-        
-        // Start playing the background music
-        bgMusic.play().catch(e => console.log("Music blocked by browser until user interacts again:", e));
-        
         initGame();
     }
 
@@ -368,18 +353,22 @@
         
         let naturals = hand.filter(c => !c.isJoker).map(c => c.value);
         
+        // If a hand has duplicate natural values, it can't form a 5-card straight
         if (new Set(naturals).size !== naturals.length) return false;
 
+        // Check every possible starting point for a straight (1 to 13)
+        // This naturally handles wrapping (e.g. 12, 13, 1, 2, 3)
         for (let start = 1; start <= 13; start++) {
             let neededValues = [];
             for (let i = 0; i < 5; i++) {
                 let val = start + i;
-                if (val > 13) val -= 13; 
+                if (val > 13) val -= 13; // Wrap around
                 neededValues.push(val);
             }
             
+            // Check if every natural card we hold fits into this specific 5-card window
             let allMatch = naturals.every(val => neededValues.includes(val));
-            if (allMatch) return true; 
+            if (allMatch) return true; // Jokers fill the empty gaps perfectly
         }
         return false;
     }
@@ -425,6 +414,7 @@
 
         render();
 
+        // Check for instant straight off the deal
         if (checkStraightClutch()) return;
 
         turn = Math.random() < 0.5 ? 0 : 1;
@@ -576,7 +566,6 @@
             let cardElements = document.getElementById('player-hand').children;
             animateCardMove(cardElements[index], 'play-pile', card, () => {
                 playPile.push(p1Hand.splice(index, 1)[0]);
-                playCardSound(); // Play the sound exactly when the card lands!
                 render();
                 if (!checkWin()) endPlayerTurn();
             });
@@ -630,7 +619,6 @@
                 
                 animateCardMove(cardElements[playableIndex], 'play-pile', {isBack: true}, () => {
                     playPile.push(cpuHand.splice(playableIndex, 1)[0]);
-                    playCardSound(); // Sound for CPU play
                     updateLog("CPU played a card.");
                     render();
                     if (!checkWin()) {
@@ -659,7 +647,6 @@
                                 let updatedCardElements = document.getElementById('cpu-hand').children;
                                 animateCardMove(updatedCardElements[newPlayableIndex], 'play-pile', {isBack: true}, () => {
                                     playPile.push(cpuHand.splice(newPlayableIndex, 1)[0]);
-                                    playCardSound(); // Sound for CPU draw-play
                                     updateLog("CPU played drawn card.");
                                     render();
                                     if (!checkWin()) { turn = 0; setTimeout(startPlayerTurn, 800); }
