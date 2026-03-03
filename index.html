@@ -262,10 +262,10 @@
         </div>
     </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-    import { getDatabase, ref, set, get, child, onValue, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
+<script>
     // --- Firebase Initialization ---
     const firebaseConfig = {
       apiKey: "AIzaSyBJUp46XMkw_9Kfus8C0kOv1Zt5XCT6I9Y",
@@ -277,8 +277,8 @@
       appId: "1:707935749617:web:1cbc184730e9eb0bdcf050"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     // --- Game Constants & Variables ---
     const SUITS = ['♠', '♥', '♦', '♣'];
@@ -295,10 +295,9 @@
 
     // Multiplayer State
     let isMultiplayer = false;
-    let myRole = 'p1'; // 'p1' or 'p2'
+    let myRole = 'p1'; 
     let currentRoomId = null;
     let roomRef = null;
-    let unsubscribeDB = null;
 
     // --- Audio System ---
     const bgMusic = new Audio('sounds/background.mp3');
@@ -314,8 +313,8 @@
     let wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
     let losses = localStorage.getItem('clutch_losses') ? parseInt(localStorage.getItem('clutch_losses')) : 0;
 
-    // --- UI Routing (Exposed to window for HTML buttons) ---
-    window.updateStatsDisplay = () => {
+    // --- UI Routing ---
+    function updateStatsDisplay() {
         document.getElementById('wins-display').innerText = wins;
         document.getElementById('losses-display').innerText = losses;
     }
@@ -327,33 +326,33 @@
         document.getElementById('game-screen').style.display = 'none';
     }
 
-    window.showStartScreen = () => {
+    function showStartScreen() {
         hideAllScreens();
         document.getElementById('start-screen').classList.remove('hidden');
-        window.updateStatsDisplay();
-    };
+        updateStatsDisplay();
+    }
 
-    window.showRules = () => { hideAllScreens(); document.getElementById('rules-screen').classList.remove('hidden'); };
-    window.showMultiplayer = () => { hideAllScreens(); document.getElementById('multiplayer-screen').classList.remove('hidden'); };
+    function showRules() { hideAllScreens(); document.getElementById('rules-screen').classList.remove('hidden'); }
+    function showMultiplayer() { hideAllScreens(); document.getElementById('multiplayer-screen').classList.remove('hidden'); }
 
     // --- Multiplayer Matchmaking ---
-    window.hostRoom = async () => {
+    async function hostRoom() {
         currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
         const code = Math.random().toString(36).substring(2, 6).toUpperCase();
         currentRoomId = code;
         myRole = 'p1';
         isMultiplayer = true;
 
-        roomRef = ref(db, `rooms/${code}`);
-        await set(roomRef, { status: 'waiting', mode: currentGameMode });
-        onDisconnect(roomRef).remove(); // Clean up if host drops
+        roomRef = db.ref(`rooms/${code}`);
+        await roomRef.set({ status: 'waiting', mode: currentGameMode });
+        roomRef.onDisconnect().remove(); // Clean up if host drops
 
         hideAllScreens();
         document.getElementById('room-code-display').innerText = code;
         document.getElementById('waiting-screen').classList.remove('hidden');
 
         // Listen for P2 joining
-        unsubscribeDB = onValue(roomRef, (snapshot) => {
+        roomRef.on('value', (snapshot) => {
             const data = snapshot.val();
             if (!data) return; // Room deleted
             if (data.status === 'playing' && !playPile.length) {
@@ -364,24 +363,24 @@
                 syncFromDatabase(data);
             }
         });
-    };
+    }
 
-    window.joinRoom = async () => {
+    async function joinRoom() {
         const codeInput = document.getElementById('join-code').value.toUpperCase();
         if (codeInput.length !== 4) return alert("Enter a 4-letter code");
 
-        const checkRef = ref(db, `rooms/${codeInput}`);
-        const snapshot = await get(checkRef);
+        const checkRef = db.ref(`rooms/${codeInput}`);
+        const snapshot = await checkRef.get();
         
         if (snapshot.exists() && snapshot.val().status === 'waiting') {
             currentRoomId = codeInput;
             myRole = 'p2';
             isMultiplayer = true;
-            roomRef = ref(db, `rooms/${codeInput}`);
-            onDisconnect(roomRef).remove();
+            roomRef = db.ref(`rooms/${codeInput}`);
+            roomRef.onDisconnect().remove();
 
             currentGameMode = snapshot.val().mode;
-            await update(roomRef, { status: 'playing' }); // Tell Host to deal
+            await roomRef.update({ status: 'playing' }); // Tell Host to deal
 
             bgMusic.play().catch(e => {});
             hideAllScreens();
@@ -389,23 +388,23 @@
             document.getElementById('opp-name').innerText = "Online Player";
             updateLog("Waiting for Host to deal...");
 
-            unsubscribeDB = onValue(roomRef, (snap) => {
+            roomRef.on('value', (snap) => {
                 const data = snap.val();
                 if (data && data.playPile) syncFromDatabase(data);
-                if (!data) { alert("Opponent left."); window.showStartScreen(); }
+                if (!data && !gameOver) { alert("Opponent left."); showStartScreen(); }
             });
         } else {
             alert("Room not found or already full.");
         }
-    };
+    }
 
-    window.cancelMatchmaking = () => {
-        if (roomRef) remove(roomRef);
-        window.showStartScreen();
-    };
+    function cancelMatchmaking() {
+        if (roomRef) roomRef.remove();
+        showStartScreen();
+    }
 
     // --- Game Initialization ---
-    window.startGame = (multiplayerFlag = false) => {
+    function startGame(multiplayerFlag = false) {
         isMultiplayer = multiplayerFlag;
         currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
         hideAllScreens();
@@ -413,7 +412,7 @@
         document.getElementById('opp-name').innerText = "CPU Opponent";
         bgMusic.play().catch(e => {});
         initGame(false);
-    };
+    }
 
     function initGame(isHostInit) {
         gameOver = false;
@@ -448,7 +447,7 @@
             document.getElementById('opp-name').innerText = "Online Player";
             
             // Push initial state to DB
-            update(roomRef, {
+            roomRef.update({
                 p1Hand: myHand, p1Deck: myDeck,
                 p2Hand: oppHand, p2Deck: oppDeck,
                 centerPile, playPile,
@@ -479,7 +478,6 @@
     function syncFromDatabase(data) {
         if (gameOver) return;
 
-        // Assign hands based on role
         myHand = myRole === 'p1' ? (data.p1Hand || []) : (data.p2Hand || []);
         myDeck = myRole === 'p1' ? (data.p1Deck || []) : (data.p2Deck || []);
         oppHand = myRole === 'p1' ? (data.p2Hand || []) : (data.p1Hand || []);
@@ -500,10 +498,10 @@
         }
 
         if (data.turn === myRole) {
-            turn = 0; // My turn locally
+            turn = 0; 
             startPlayerTurn();
         } else {
-            turn = 1; // Not my turn
+            turn = 1; 
             document.getElementById('btn-draw-center').disabled = true;
         }
     }
@@ -528,7 +526,7 @@
             payload.winReason = winReason;
         }
 
-        await update(roomRef, payload);
+        await roomRef.update(payload);
     }
 
     // --- Game Logic ---
@@ -569,10 +567,9 @@
         render();
         
         if (isMultiplayer && roomRef) {
-            // Clean up DB after short delay
-            setTimeout(() => { if(myRole === 'p1') remove(roomRef); }, 2000);
+            setTimeout(() => { if(myRole === 'p1') roomRef.remove(); }, 2000);
         }
-        setTimeout(window.showStartScreen, 4500); 
+        setTimeout(showStartScreen, 4500); 
     }
 
     function checkWin() {
@@ -612,7 +609,7 @@
             else handleEndGame(true, "straight");
             return true;
         }
-        if (!isMultiplayer && isStraight(oppHand)) { // In MP, remote player checks their own hand
+        if (!isMultiplayer && isStraight(oppHand)) { 
             handleEndGame(false, "straight");
             return true;
         }
@@ -654,7 +651,7 @@
         }
     }
 
-    window.playPlayerCard = (index) => {
+    function playPlayerCard(index) {
         if (turn !== 0 || gameOver || isAnimating) return;
         
         let card = myHand[index];
@@ -668,9 +665,9 @@
                 if (!checkWin()) endPlayerTurn("Played a card.");
             });
         }
-    };
+    }
 
-    window.drawFromCenter = () => {
+    function drawFromCenter() {
         if (isAnimating || gameOver) return;
         if (centerPile.length === 0) recycleCenterPile();
         
@@ -686,7 +683,7 @@
             hasDrawnFromCenter = true;
             setTimeout(() => endPlayerTurn("Passed turn."), 1500);
         }
-    };
+    }
 
     function endPlayerTurn(logMsg = "Turn passed.") {
         if (gameOver) return;
@@ -764,7 +761,7 @@
 
     // --- Animation & Rendering ---
     function animateCardMove(startEl, targetContainerId, cardObj, callback) {
-        if (!startEl) { callback(); return; } // Safety fallback
+        if (!startEl) { callback(); return; } 
         isAnimating = true;
         let startRect = startEl.getBoundingClientRect();
         let targetContainer = document.getElementById(targetContainerId);
@@ -814,7 +811,7 @@
             if (turn === 0 && !canPlay(cardObj, topCard)) {
                 cardEl.classList.add('disabled');
             } else if (turn === 0) {
-                cardEl.onclick = () => window.playPlayerCard(index);
+                cardEl.onclick = () => playPlayerCard(index);
             }
             p1Div.appendChild(cardEl);
         });
@@ -841,7 +838,7 @@
     function updateLog(msg) { if(msg) document.getElementById('log').innerText = msg; }
     
     // Init stats on boot
-    window.updateStatsDisplay();
+    updateStatsDisplay();
 
 </script>
 </body>
