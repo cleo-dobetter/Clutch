@@ -315,13 +315,18 @@
     // --- Audio System ---
     const bgMusic = new Audio('sounds/background.mp3');
     bgMusic.loop = true;
-    bgMusic.volume = 0.4; // Slightly lower volume so it doesn't drown out the sound effects
+    bgMusic.volume = 0.2; // Slightly lower volume so it doesn't drown out the sound effects
+ 
 
     function playCardSound() {
-        // Creating a new instance each time allows the sound to overlap cleanly if multiple cards are played fast
         const cardSfx = new Audio('sounds/playingcard.mp3');
-        cardSfx.play().catch(e => console.log("Sound effect blocked by browser:", e));
+        
+        // Skip the first 0.5 seconds of silence in the MP3
+        cardSfx.currentTime = 0.5; 
+        
+        cardSfx.play().catch(e => console.log("Sound effect blocked:", e));
     }
+
 
     // --- Local Storage Stats ---
     let wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
