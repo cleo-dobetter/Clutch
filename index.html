@@ -24,7 +24,7 @@
         }
 
         /* --- Screens --- */
-        #start-screen, #rules-screen {
+        #start-screen, #rules-screen, #multiplayer-screen, #waiting-screen {
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -33,6 +33,8 @@
             width: 100%;
             background: radial-gradient(circle, #2E7D32 0%, #1B5E20 100%);
             padding: 20px;
+            position: absolute;
+            top: 0; left: 0; z-index: 10;
         }
 
         #game-screen {
@@ -43,12 +45,10 @@
             max-width: 900px;
             justify-content: space-evenly;
             padding: 10px;
+            z-index: 5;
         }
 
-        #rules-screen {
-            display: none;
-            overflow-y: auto;
-        }
+        .hidden { display: none !important; }
 
         .rules-content {
             background: rgba(0,0,0,0.6);
@@ -58,6 +58,8 @@
             text-align: left;
             line-height: 1.6;
             margin-bottom: 20px;
+            overflow-y: auto;
+            max-height: 70vh;
         }
 
         .rules-content h2 { color: #FFEB3B; margin-top: 0; text-align: center; }
@@ -90,22 +92,10 @@
             font-size: 1.1rem;
         }
 
-        .mode-selector label {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+        .mode-selector label { cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .mode-selector input[type="radio"] { transform: scale(1.2); accent-color: #FFEB3B; }
 
-        .mode-selector input[type="radio"] {
-            transform: scale(1.2);
-            accent-color: #FFEB3B;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 15px;
-        }
+        .button-group { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
 
         button {
             padding: 15px 30px;
@@ -118,19 +108,21 @@
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             transition: background-color 0.2s, transform 0.1s;
+            margin-bottom: 10px;
         }
 
-        button:hover:not(:disabled) {
-            background-color: #1565C0;
-            transform: translateY(-2px);
-        }
-
+        button:hover:not(:disabled) { background-color: #1565C0; transform: translateY(-2px); }
         button:active:not(:disabled) { transform: translateY(0); }
+        button:disabled { background-color: #9E9E9E; cursor: not-allowed; box-shadow: none; }
 
-        button:disabled {
-            background-color: #9E9E9E;
-            cursor: not-allowed;
-            box-shadow: none;
+        input[type="text"] {
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            border: none;
+            text-align: center;
+            margin-bottom: 15px;
+            text-transform: uppercase;
         }
 
         /* --- Game Board --- */
@@ -175,68 +167,28 @@
 
         .card.red { color: #D32F2F; }
         .card.black { color: #212121; }
-        
         .card.back {
             background: repeating-linear-gradient(45deg, #1976D2, #1976D2 10px, #0D47A1 10px, #0D47A1 20px);
-            border-color: white;
-            cursor: default;
+            border-color: white; cursor: default;
         }
+        .card:hover:not(.back):not(.disabled) { transform: translateY(-8px); border-color: #FFEB3B; }
+        .card.disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; border-color: #ccc !important; }
 
-        .card:hover:not(.back):not(.disabled) {
-            transform: translateY(-8px);
-            border-color: #FFEB3B;
-        }
+        .info { font-size: clamp(14px, 3vw, 18px); margin-bottom: 5px; font-weight: bold; }
+        #log { font-size: clamp(16px, 3.5vw, 20px); font-weight: bold; color: #FFEB3B; min-height: 25px; margin-bottom: 10px; transition: color 0.3s; }
+        .deck-counter { font-size: clamp(12px, 2.5vw, 14px); margin-top: 5px; color: #E0E0E0; }
 
-        .card.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-            border-color: #ccc !important;
-        }
-
-        .info {
-            font-size: clamp(14px, 3vw, 18px);
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        #log {
-            font-size: clamp(16px, 3.5vw, 20px);
-            font-weight: bold;
-            color: #FFEB3B;
-            min-height: 25px;
-            margin-bottom: 10px;
-            transition: color 0.3s;
-        }
+        .center-area { display: flex; justify-content: center; align-items: center; gap: 5vw; }
+        .center-stack { display: flex; flex-direction: column; align-items: center; min-width: 90px; }
         
-        .deck-counter {
-            font-size: clamp(12px, 2.5vw, 14px);
-            margin-top: 5px;
-            color: #E0E0E0;
-        }
-
-        .center-area {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5vw;
-        }
-
-        .center-stack {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-width: 90px;
-        }
+        #room-code-display { font-size: 3rem; color: #FFEB3B; margin: 20px 0; letter-spacing: 5px; }
     </style>
 </head>
 <body>
 
     <div id="start-screen">
         <h1>Clutch</h1>
-        <div class="stats-box">
-            Record: <span id="wins-display">0</span> Wins - <span id="losses-display">0</span> Losses
-        </div>
+        <div class="stats-box">Record: <span id="wins-display">0</span> Wins - <span id="losses-display">0</span> Losses</div>
         
         <div class="mode-selector">
             <label><input type="radio" name="gameMode" value="standard" checked> Standard</label>
@@ -244,36 +196,47 @@
         </div>
 
         <div class="button-group">
-            <button onclick="startGame()">Start Game</button>
+            <button onclick="startGame(false)">Local Game (vs CPU)</button>
+            <button onclick="showMultiplayer()" style="background-color: #E64A19;">Multiplayer</button>
             <button onclick="showRules()" style="background-color: #4CAF50;">How to Play</button>
         </div>
     </div>
 
-    <div id="rules-screen">
+    <div id="multiplayer-screen" class="hidden">
+        <h1>Online Play</h1>
+        <button onclick="hostRoom()" style="background-color: #E64A19; width: 250px;">Host a Room</button>
+        <div style="margin: 20px 0; font-weight: bold;">OR</div>
+        <input type="text" id="join-code" placeholder="Enter Room Code" maxlength="4">
+        <button onclick="joinRoom()" style="background-color: #1976D2; width: 250px;">Join Room</button>
+        <button onclick="showStartScreen()" style="background-color: #9E9E9E; margin-top: 30px;">Back</button>
+    </div>
+
+    <div id="waiting-screen" class="hidden">
+        <h2>Waiting for Opponent...</h2>
+        <div id="room-code-display">----</div>
+        <p>Give this code to your friend to join!</p>
+        <button onclick="cancelMatchmaking()" style="background-color: #D32F2F; margin-top: 30px;">Cancel</button>
+    </div>
+
+    <div id="rules-screen" class="hidden">
         <div class="rules-content">
             <h2>How to Play Clutch</h2>
             <ul>
                 <li><strong>The Setup:</strong> The game uses a standard deck + 2 Jokers. Each player gets a 20-card "personal deck" and draws a 5-card hand.</li>
                 <li><strong>The Goal:</strong> Be the first player to empty <em>both</em> your hand and your personal deck!</li>
                 <li><strong>Playing Cards:</strong> You must play a card on the center pile that matches the <strong>Suit</strong> OR is exactly <strong>One Rank Up/Down</strong> from the top card. (Kings wrap around to Aces).</li>
-                <li><strong>Wilds:</strong> Jokers are Wild and can be played on anything, and anything can be played on them.</li>
-                <li><strong>Your Turn:</strong> 
-                    <ul>
-                        <li>If you have fewer than 5 cards in your hand, you automatically draw from your personal deck.</li>
-                        <li>Play a valid card. If you cannot play, you must draw from the Center Pile.</li>
-                        <li>If you <em>still</em> cannot play after drawing, your turn passes.</li>
-                    </ul>
-                </li>
+                <li><strong>Wilds:</strong> Jokers are Wild.</li>
+                <li><strong>Your Turn:</strong> If you have fewer than 5 cards in your hand, you automatically draw from your personal deck. Play a valid card. If you cannot play, draw from the Center Pile. If you still cannot play, pass.</li>
                 <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
-                <li><strong style="color: #FFEB3B;">Straight Clutch Mode:</strong> If you ever have a 5-card Straight in your hand at any point, you instantly win the game! Jokers can act as any card in the straight, and straights can wrap around (e.g., Q-K-A-2-3).</li>
+                <li><strong style="color: #FFEB3B;">Straight Clutch Mode:</strong> If you ever have a 5-card Straight in your hand, you instantly win!</li>
             </ul>
         </div>
-        <button onclick="hideRules()">Back to Menu</button>
+        <button onclick="showStartScreen()">Back to Menu</button>
     </div>
 
     <div id="game-screen">
         <div class="board-section">
-            <div class="info">CPU Opponent</div>
+            <div class="info" id="opp-name">Opponent</div>
             <div id="cpu-hand" class="cards-container"></div>
             <div class="deck-counter">Personal Deck: <span id="cpu-deck-count">20</span></div>
         </div>
@@ -299,117 +262,166 @@
         </div>
     </div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getDatabase, ref, set, get, child, onValue, update, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+    // --- Firebase Initialization ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyBJUp46XMkw_9Kfus8C0kOv1Zt5XCT6I9Y",
+      authDomain: "clutch-card-game.firebaseapp.com",
+      databaseURL: "https://clutch-card-game-default-rtdb.firebaseio.com/",
+      projectId: "clutch-card-game",
+      storageBucket: "clutch-card-game.firebasestorage.app",
+      messagingSenderId: "707935749617",
+      appId: "1:707935749617:web:1cbc184730e9eb0bdcf050"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // --- Game Constants & Variables ---
     const SUITS = ['♠', '♥', '♦', '♣'];
     const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     
-    let mainDeck = [], p1Deck = [], cpuDeck = [];
-    let p1Hand = [], cpuHand = [], playPile = [], centerPile = [];
+    let mainDeck = [], myDeck = [], oppDeck = [];
+    let myHand = [], oppHand = [], playPile = [], centerPile = [];
     
-    let turn = 0; 
+    let turn = 0; // 0 = P1/Local, 1 = P2/CPU
     let hasDrawnFromCenter = false;
     let gameOver = false;
     let isAnimating = false; 
     let currentGameMode = "standard";
 
+    // Multiplayer State
+    let isMultiplayer = false;
+    let myRole = 'p1'; // 'p1' or 'p2'
+    let currentRoomId = null;
+    let roomRef = null;
+    let unsubscribeDB = null;
+
     // --- Audio System ---
     const bgMusic = new Audio('sounds/background.mp3');
     bgMusic.loop = true;
-    bgMusic.volume = 0.2; // Slightly lower volume so it doesn't drown out the sound effects
- 
+    bgMusic.volume = 0.2; 
 
     function playCardSound() {
         const cardSfx = new Audio('sounds/cardplay.mp3');
-        
-        // Skip the first 0.5 seconds of silence in the MP3
         cardSfx.currentTime = 0.12; 
-        
-        cardSfx.play().catch(e => console.log("Sound effect blocked:", e));
+        cardSfx.play().catch(e => console.log("SFX blocked:", e));
     }
 
-
-    // --- Local Storage Stats ---
     let wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
     let losses = localStorage.getItem('clutch_losses') ? parseInt(localStorage.getItem('clutch_losses')) : 0;
 
-    function updateStatsDisplay() {
+    // --- UI Routing (Exposed to window for HTML buttons) ---
+    window.updateStatsDisplay = () => {
         document.getElementById('wins-display').innerText = wins;
         document.getElementById('losses-display').innerText = losses;
     }
-    updateStatsDisplay();
-
-    // --- Screen Management ---
-    function showStartScreen() {
+    
+    function hideAllScreens() {
+        ['start-screen', 'rules-screen', 'multiplayer-screen', 'waiting-screen', 'game-screen'].forEach(id => {
+            document.getElementById(id).classList.add('hidden');
+        });
         document.getElementById('game-screen').style.display = 'none';
-        document.getElementById('rules-screen').style.display = 'none';
-        document.getElementById('start-screen').style.display = 'flex';
-        updateStatsDisplay();
     }
 
-    function showRules() {
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('rules-screen').style.display = 'flex';
-    }
+    window.showStartScreen = () => {
+        hideAllScreens();
+        document.getElementById('start-screen').classList.remove('hidden');
+        window.updateStatsDisplay();
+    };
 
-    function hideRules() {
-        document.getElementById('rules-screen').style.display = 'none';
-        document.getElementById('start-screen').style.display = 'flex';
-    }
+    window.showRules = () => { hideAllScreens(); document.getElementById('rules-screen').classList.remove('hidden'); };
+    window.showMultiplayer = () => { hideAllScreens(); document.getElementById('multiplayer-screen').classList.remove('hidden'); };
 
-    function startGame() {
+    // --- Multiplayer Matchmaking ---
+    window.hostRoom = async () => {
         currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('game-screen').style.display = 'flex';
-        
-        // Start playing the background music
-        bgMusic.play().catch(e => console.log("Music blocked by browser until user interacts again:", e));
-        
-        initGame();
-    }
+        const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+        currentRoomId = code;
+        myRole = 'p1';
+        isMultiplayer = true;
 
-    // --- Straight Logic ---
-    function isStraight(hand) {
-        if (hand.length < 5) return false;
-        
-        let naturals = hand.filter(c => !c.isJoker).map(c => c.value);
-        
-        if (new Set(naturals).size !== naturals.length) return false;
+        roomRef = ref(db, `rooms/${code}`);
+        await set(roomRef, { status: 'waiting', mode: currentGameMode });
+        onDisconnect(roomRef).remove(); // Clean up if host drops
 
-        for (let start = 1; start <= 13; start++) {
-            let neededValues = [];
-            for (let i = 0; i < 5; i++) {
-                let val = start + i;
-                if (val > 13) val -= 13; 
-                neededValues.push(val);
+        hideAllScreens();
+        document.getElementById('room-code-display').innerText = code;
+        document.getElementById('waiting-screen').classList.remove('hidden');
+
+        // Listen for P2 joining
+        unsubscribeDB = onValue(roomRef, (snapshot) => {
+            const data = snapshot.val();
+            if (!data) return; // Room deleted
+            if (data.status === 'playing' && !playPile.length) {
+                // P2 joined! Host initializes the deck and pushes it.
+                bgMusic.play().catch(e => {});
+                initGame(true); // true = host init
+            } else if (data.status === 'playing' && data.playPile) {
+                syncFromDatabase(data);
             }
-            
-            let allMatch = naturals.every(val => neededValues.includes(val));
-            if (allMatch) return true; 
-        }
-        return false;
-    }
+        });
+    };
 
-    function checkStraightClutch() {
-        if (currentGameMode !== "straight") return false;
+    window.joinRoom = async () => {
+        const codeInput = document.getElementById('join-code').value.toUpperCase();
+        if (codeInput.length !== 4) return alert("Enter a 4-letter code");
 
-        if (isStraight(p1Hand)) {
-            handleEndGame(true, "straight");
-            return true;
-        }
-        if (isStraight(cpuHand)) {
-            handleEndGame(false, "straight");
-            return true;
-        }
-        return false;
-    }
+        const checkRef = ref(db, `rooms/${codeInput}`);
+        const snapshot = await get(checkRef);
+        
+        if (snapshot.exists() && snapshot.val().status === 'waiting') {
+            currentRoomId = codeInput;
+            myRole = 'p2';
+            isMultiplayer = true;
+            roomRef = ref(db, `rooms/${codeInput}`);
+            onDisconnect(roomRef).remove();
 
-    // --- Initialization ---
-    function initGame() {
+            currentGameMode = snapshot.val().mode;
+            await update(roomRef, { status: 'playing' }); // Tell Host to deal
+
+            bgMusic.play().catch(e => {});
+            hideAllScreens();
+            document.getElementById('game-screen').style.display = 'flex';
+            document.getElementById('opp-name').innerText = "Online Player";
+            updateLog("Waiting for Host to deal...");
+
+            unsubscribeDB = onValue(roomRef, (snap) => {
+                const data = snap.val();
+                if (data && data.playPile) syncFromDatabase(data);
+                if (!data) { alert("Opponent left."); window.showStartScreen(); }
+            });
+        } else {
+            alert("Room not found or already full.");
+        }
+    };
+
+    window.cancelMatchmaking = () => {
+        if (roomRef) remove(roomRef);
+        window.showStartScreen();
+    };
+
+    // --- Game Initialization ---
+    window.startGame = (multiplayerFlag = false) => {
+        isMultiplayer = multiplayerFlag;
+        currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
+        hideAllScreens();
+        document.getElementById('game-screen').style.display = 'flex';
+        document.getElementById('opp-name').innerText = "CPU Opponent";
+        bgMusic.play().catch(e => {});
+        initGame(false);
+    };
+
+    function initGame(isHostInit) {
         gameOver = false;
         isAnimating = false;
         document.getElementById('log').style.color = '#FFEB3B';
-        mainDeck = []; playPile = []; centerPile = []; p1Hand = []; cpuHand = [];
+        mainDeck = []; playPile = []; centerPile = []; myHand = []; oppHand = [];
 
+        // Build Deck
         for (let s of SUITS) {
             for (let i = 0; i < RANKS.length; i++) {
                 mainDeck.push({ suit: s, rank: RANKS[i], value: i + 1, isJoker: false, color: (s==='♥'||s==='♦') ? 'red' : 'black' });
@@ -420,23 +432,39 @@
 
         shuffle(mainDeck);
 
-        p1Deck = mainDeck.splice(0, 20);
-        cpuDeck = mainDeck.splice(0, 20);
-        p1Hand = p1Deck.splice(0, 5);
-        cpuHand = cpuDeck.splice(0, 5);
+        myDeck = mainDeck.splice(0, 20);
+        oppDeck = mainDeck.splice(0, 20);
+        myHand = myDeck.splice(0, 5);
+        oppHand = oppDeck.splice(0, 5);
 
         centerPile = mainDeck; 
         playPile.push(centerPile.pop()); 
 
-        render();
+        turn = Math.random() < 0.5 ? 0 : 1; 
 
-        if (checkStraightClutch()) return;
+        if (isMultiplayer && isHostInit) {
+            hideAllScreens();
+            document.getElementById('game-screen').style.display = 'flex';
+            document.getElementById('opp-name').innerText = "Online Player";
+            
+            // Push initial state to DB
+            update(roomRef, {
+                p1Hand: myHand, p1Deck: myDeck,
+                p2Hand: oppHand, p2Deck: oppDeck,
+                centerPile, playPile,
+                turn: turn === 0 ? 'p1' : 'p2',
+                log: turn === 0 ? "P1 goes first." : "P2 goes first."
+            });
+            return; // DB listener will take over
+        }
 
-        turn = Math.random() < 0.5 ? 0 : 1;
-        updateLog(turn === 0 ? "You won the toss! Your turn." : "CPU won the toss. CPU goes first.");
-        
-        if (turn === 0) setTimeout(startPlayerTurn, 1000);
-        else setTimeout(cpuTurn, 1500);
+        if (!isMultiplayer) {
+            render();
+            if (checkStraightClutch()) return;
+            updateLog(turn === 0 ? "You won the toss! Your turn." : "CPU won the toss.");
+            if (turn === 0) setTimeout(startPlayerTurn, 1000);
+            else setTimeout(cpuTurn, 1500);
+        }
     }
 
     function shuffle(array) {
@@ -446,8 +474,297 @@
         }
     }
 
-    // --- Animation Logic ---
+    // --- Multiplayer State Sync ---
+    let prevPlayPileLength = 0;
+    function syncFromDatabase(data) {
+        if (gameOver) return;
+
+        // Assign hands based on role
+        myHand = myRole === 'p1' ? (data.p1Hand || []) : (data.p2Hand || []);
+        myDeck = myRole === 'p1' ? (data.p1Deck || []) : (data.p2Deck || []);
+        oppHand = myRole === 'p1' ? (data.p2Hand || []) : (data.p1Hand || []);
+        oppDeck = myRole === 'p1' ? (data.p2Deck || []) : (data.p1Deck || []);
+        
+        centerPile = data.centerPile || [];
+        playPile = data.playPile || [];
+        
+        if (playPile.length > prevPlayPileLength) playCardSound();
+        prevPlayPileLength = playPile.length;
+
+        updateLog(data.log);
+        render();
+
+        if (data.winner) {
+            handleEndGame(data.winner === myRole, data.winReason);
+            return;
+        }
+
+        if (data.turn === myRole) {
+            turn = 0; // My turn locally
+            startPlayerTurn();
+        } else {
+            turn = 1; // Not my turn
+            document.getElementById('btn-draw-center').disabled = true;
+        }
+    }
+
+    async function pushStateToDB(logMsg, winner = null, winReason = null) {
+        let payload = {
+            centerPile, playPile,
+            turn: turn === 0 ? myRole : (myRole === 'p1' ? 'p2' : 'p1'),
+            log: logMsg
+        };
+        
+        if (myRole === 'p1') {
+            payload.p1Hand = myHand; payload.p1Deck = myDeck;
+            payload.p2Hand = oppHand; payload.p2Deck = oppDeck;
+        } else {
+            payload.p2Hand = myHand; payload.p2Deck = myDeck;
+            payload.p1Hand = oppHand; payload.p1Deck = oppDeck;
+        }
+
+        if (winner) {
+            payload.winner = winner;
+            payload.winReason = winReason;
+        }
+
+        await update(roomRef, payload);
+    }
+
+    // --- Game Logic ---
+    function canPlay(card, topCard) {
+        if (!card || !topCard) return false;
+        if (card.isJoker || topCard.isJoker) return true; 
+        if (card.suit === topCard.suit) return true;      
+        
+        let v1 = card.value, v2 = topCard.value;
+        if (Math.abs(v1 - v2) === 1) return true;
+        if ((v1 === 1 && v2 === 13) || (v1 === 13 && v2 === 1)) return true; 
+        return false;
+    }
+
+    function recycleCenterPile() {
+        if (playPile.length > 1) {
+            let top = playPile.pop();
+            centerPile = playPile;
+            shuffle(centerPile);
+            playPile = [top];
+        }
+    }
+
+    function handleEndGame(didIWin, reason = "empty") {
+        if (gameOver) return;
+        gameOver = true;
+        let logEl = document.getElementById('log');
+        
+        if (didIWin) {
+            if (reason === "straight") { logEl.style.color = '#00E676'; updateLog("🏆 INSTANT WIN! STRAIGHT CLUTCH! 🏆"); } 
+            else { updateLog("🎉 YOU WIN! You ran out of cards! 🎉"); }
+            wins++; localStorage.setItem('clutch_wins', wins);
+        } else {
+            if (reason === "straight") { logEl.style.color = '#FF1744'; updateLog("💀 OPPONENT WIN! STRAIGHT CLUTCH! 💀"); } 
+            else { updateLog("💀 OPPONENT WINS! 💀"); }
+            losses++; localStorage.setItem('clutch_losses', losses);
+        }
+        render();
+        
+        if (isMultiplayer && roomRef) {
+            // Clean up DB after short delay
+            setTimeout(() => { if(myRole === 'p1') remove(roomRef); }, 2000);
+        }
+        setTimeout(window.showStartScreen, 4500); 
+    }
+
+    function checkWin() {
+        if (myHand.length === 0 && myDeck.length === 0) { 
+            if(isMultiplayer) pushStateToDB("Player wins!", myRole, "empty");
+            else handleEndGame(true, "empty"); 
+            return true; 
+        }
+        if (oppHand.length === 0 && oppDeck.length === 0) { 
+            if(isMultiplayer) pushStateToDB("Opponent wins!", myRole==='p1'?'p2':'p1', "empty");
+            else handleEndGame(false, "empty"); 
+            return true; 
+        }
+        return false;
+    }
+
+    function isStraight(hand) {
+        if (hand.length < 5) return false;
+        let naturals = hand.filter(c => !c.isJoker).map(c => c.value);
+        if (new Set(naturals).size !== naturals.length) return false;
+
+        for (let start = 1; start <= 13; start++) {
+            let neededValues = [];
+            for (let i = 0; i < 5; i++) {
+                let val = start + i; if (val > 13) val -= 13; 
+                neededValues.push(val);
+            }
+            if (naturals.every(val => neededValues.includes(val))) return true; 
+        }
+        return false;
+    }
+
+    function checkStraightClutch() {
+        if (currentGameMode !== "straight") return false;
+        if (isStraight(myHand)) {
+            if(isMultiplayer) pushStateToDB("Straight Clutch!", myRole, "straight");
+            else handleEndGame(true, "straight");
+            return true;
+        }
+        if (!isMultiplayer && isStraight(oppHand)) { // In MP, remote player checks their own hand
+            handleEndGame(false, "straight");
+            return true;
+        }
+        return false;
+    }
+
+    // --- Player Mechanics ---
+    function startPlayerTurn() {
+        if (gameOver) return;
+        hasDrawnFromCenter = false;
+
+        if (myHand.length < 5 && myDeck.length > 0) {
+            myHand.push(myDeck.pop());
+            updateLog("Your turn. Auto-drew 1 card.");
+        } else {
+            updateLog("Your turn.");
+        }
+        render();
+        if (checkStraightClutch()) return;
+        evaluatePlayerMoves();
+    }
+
+    function evaluatePlayerMoves() {
+        if (gameOver) return;
+        let topCard = playPile[playPile.length - 1];
+        let hasPlayableCard = myHand.some(c => canPlay(c, topCard));
+        let drawBtn = document.getElementById('btn-draw-center');
+        
+        drawBtn.disabled = true;
+
+        if (!hasPlayableCard) {
+            if (!hasDrawnFromCenter) {
+                updateLog("No playable cards. Draw from Center.");
+                drawBtn.disabled = false;
+            } else {
+                updateLog("Still no playable cards. Turn passed.");
+                setTimeout(endPlayerTurn, 1500);
+            }
+        }
+    }
+
+    window.playPlayerCard = (index) => {
+        if (turn !== 0 || gameOver || isAnimating) return;
+        
+        let card = myHand[index];
+        let topCard = playPile[playPile.length - 1];
+
+        if (canPlay(card, topCard)) {
+            let cardElements = document.getElementById('player-hand').children;
+            animateCardMove(cardElements[index], 'play-pile', card, () => {
+                playPile.push(myHand.splice(index, 1)[0]);
+                playCardSound();
+                if (!checkWin()) endPlayerTurn("Played a card.");
+            });
+        }
+    };
+
+    window.drawFromCenter = () => {
+        if (isAnimating || gameOver) return;
+        if (centerPile.length === 0) recycleCenterPile();
+        
+        if (centerPile.length > 0) {
+            myHand.push(centerPile.pop());
+            hasDrawnFromCenter = true;
+            updateLog("You drew from the center.");
+            render();
+            if (checkStraightClutch()) return;
+            evaluatePlayerMoves();
+        } else {
+            updateLog("Center pile empty! Turn passed.");
+            hasDrawnFromCenter = true;
+            setTimeout(() => endPlayerTurn("Passed turn."), 1500);
+        }
+    };
+
+    function endPlayerTurn(logMsg = "Turn passed.") {
+        if (gameOver) return;
+        turn = 1;
+        render();
+        
+        if (isMultiplayer) {
+            pushStateToDB(logMsg);
+        } else {
+            setTimeout(cpuTurn, 1000);
+        }
+    }
+
+    // --- CPU Mechanics (Local Only) ---
+    function cpuTurn() {
+        if (gameOver || isMultiplayer) return;
+        updateLog("CPU is thinking...");
+
+        setTimeout(() => {
+            if (gameOver) return;
+            if (oppHand.length < 5 && oppDeck.length > 0) oppHand.push(oppDeck.pop());
+            render();
+            if (checkStraightClutch()) return;
+
+            let topCard = playPile[playPile.length - 1];
+            let playableIndex = oppHand.findIndex(c => canPlay(c, topCard));
+
+            if (playableIndex !== -1) {
+                let cardEls = document.getElementById('cpu-hand').children;
+                animateCardMove(cardEls[playableIndex], 'play-pile', {isBack: true}, () => {
+                    playPile.push(oppHand.splice(playableIndex, 1)[0]);
+                    playCardSound();
+                    updateLog("CPU played a card.");
+                    render();
+                    if (!checkWin()) { turn = 0; setTimeout(startPlayerTurn, 800); }
+                });
+            } else {
+                updateLog("CPU cannot play. Drawing...");
+                if (centerPile.length === 0) recycleCenterPile();
+
+                setTimeout(() => {
+                    if (gameOver) return;
+                    if (centerPile.length > 0) {
+                        oppHand.push(centerPile.pop());
+                        render();
+                        if (checkStraightClutch()) return;
+
+                        let newTopCard = playPile[playPile.length - 1];
+                        let newIdx = oppHand.findIndex(c => canPlay(c, newTopCard));
+                        
+                        if (newIdx !== -1) {
+                            setTimeout(() => {
+                                if (gameOver) return;
+                                let updatedEls = document.getElementById('cpu-hand').children;
+                                animateCardMove(updatedEls[newIdx], 'play-pile', {isBack: true}, () => {
+                                    playPile.push(oppHand.splice(newIdx, 1)[0]);
+                                    playCardSound();
+                                    updateLog("CPU played drawn card.");
+                                    render();
+                                    if (!checkWin()) { turn = 0; setTimeout(startPlayerTurn, 800); }
+                                });
+                            }, 1000);
+                        } else {
+                            updateLog("CPU passes.");
+                            turn = 0; setTimeout(startPlayerTurn, 1000);
+                        }
+                    } else {
+                        updateLog("Center empty. CPU passes.");
+                        turn = 0; setTimeout(startPlayerTurn, 1000);
+                    }
+                }, 1000);
+            }
+        }, 1200);
+    }
+
+    // --- Animation & Rendering ---
     function animateCardMove(startEl, targetContainerId, cardObj, callback) {
+        if (!startEl) { callback(); return; } // Safety fallback
         isAnimating = true;
         let startRect = startEl.getBoundingClientRect();
         let targetContainer = document.getElementById(targetContainerId);
@@ -468,7 +785,6 @@
         clone.offsetWidth; 
 
         let destRect = targetContainer.lastChild ? targetContainer.lastChild.getBoundingClientRect() : targetContainer.getBoundingClientRect();
-
         clone.style.left = destRect.left + 'px';
         clone.style.top = destRect.top + 'px';
 
@@ -479,255 +795,37 @@
         }, 300);
     }
 
-    // --- Game Logic ---
-    function canPlay(card, topCard) {
-        if (card.isJoker || topCard.isJoker) return true; 
-        if (card.suit === topCard.suit) return true;      
-        
-        let v1 = card.value;
-        let v2 = topCard.value;
-        
-        if (Math.abs(v1 - v2) === 1) return true;
-        if ((v1 === 1 && v2 === 13) || (v1 === 13 && v2 === 1)) return true; 
-
-        return false;
-    }
-
-    function recycleCenterPile() {
-        if (playPile.length > 1) {
-            let top = playPile.pop();
-            centerPile = playPile;
-            shuffle(centerPile);
-            playPile = [top];
-            updateLog("Center pile reshuffled.");
-        }
-    }
-
-    function handleEndGame(didPlayerWin, reason = "empty") {
-        gameOver = true;
-        let logEl = document.getElementById('log');
-        
-        if (didPlayerWin) {
-            if (reason === "straight") {
-                logEl.style.color = '#00E676';
-                updateLog("🏆 INSTANT WIN! YOU HIT A STRAIGHT CLUTCH! 🏆");
-            } else {
-                updateLog("🎉 YOU WIN! You ran out of cards! 🎉");
-            }
-            wins++; localStorage.setItem('clutch_wins', wins);
-        } else {
-            if (reason === "straight") {
-                logEl.style.color = '#FF1744';
-                updateLog("💀 CPU INSTANT WIN! CPU HIT A STRAIGHT CLUTCH! 💀");
-            } else {
-                updateLog("💀 CPU WINS! CPU ran out of cards! 💀");
-            }
-            losses++; localStorage.setItem('clutch_losses', losses);
-        }
-        render();
-        setTimeout(showStartScreen, 4500); 
-    }
-
-    function checkWin() {
-        if (p1Hand.length === 0 && p1Deck.length === 0) { handleEndGame(true, "empty"); return true; }
-        if (cpuHand.length === 0 && cpuDeck.length === 0) { handleEndGame(false, "empty"); return true; }
-        return false;
-    }
-
-    // --- Player Mechanics ---
-    function startPlayerTurn() {
-        if (gameOver) return;
-        hasDrawnFromCenter = false;
-
-        if (p1Hand.length < 5 && p1Deck.length > 0) {
-            p1Hand.push(p1Deck.pop());
-            updateLog("Your turn. Auto-drew 1 card.");
-            render();
-            if (checkStraightClutch()) return;
-        } else {
-            updateLog("Your turn.");
-            render();
-        }
-
-        evaluatePlayerMoves();
-    }
-
-    function evaluatePlayerMoves() {
-        if (gameOver) return;
-        let topCard = playPile[playPile.length - 1];
-        let hasPlayableCard = p1Hand.some(c => canPlay(c, topCard));
-        let drawBtn = document.getElementById('btn-draw-center');
-        
-        drawBtn.disabled = true;
-
-        if (!hasPlayableCard) {
-            if (!hasDrawnFromCenter) {
-                updateLog("No playable cards. Draw from Center.");
-                drawBtn.disabled = false;
-            } else {
-                updateLog("Still no playable cards. Turn passed.");
-                setTimeout(endPlayerTurn, 1500);
-            }
-        }
-    }
-
-    function playPlayerCard(index) {
-        if (turn !== 0 || gameOver || isAnimating) return;
-        
-        let card = p1Hand[index];
-        let topCard = playPile[playPile.length - 1];
-
-        if (canPlay(card, topCard)) {
-            let cardElements = document.getElementById('player-hand').children;
-            animateCardMove(cardElements[index], 'play-pile', card, () => {
-                playPile.push(p1Hand.splice(index, 1)[0]);
-                playCardSound(); // Play the sound exactly when the card lands!
-                render();
-                if (!checkWin()) endPlayerTurn();
-            });
-        }
-    }
-
-    function drawFromCenter() {
-        if (isAnimating || gameOver) return;
-        if (centerPile.length === 0) recycleCenterPile();
-        
-        if (centerPile.length > 0) {
-            p1Hand.push(centerPile.pop());
-            hasDrawnFromCenter = true;
-            updateLog("You drew from the center.");
-            render();
-            
-            if (checkStraightClutch()) return;
-            evaluatePlayerMoves();
-        } else {
-            updateLog("Center pile empty! Turn passed.");
-            hasDrawnFromCenter = true;
-            setTimeout(endPlayerTurn, 1500);
-        }
-    }
-
-    function endPlayerTurn() {
-        if (gameOver) return;
-        turn = 1;
-        render();
-        setTimeout(cpuTurn, 1000);
-    }
-
-    // --- CPU Mechanics ---
-    function cpuTurn() {
-        if (gameOver) return;
-        updateLog("CPU is thinking...");
-
-        setTimeout(() => {
-            if (gameOver) return;
-            if (cpuHand.length < 5 && cpuDeck.length > 0) {
-                cpuHand.push(cpuDeck.pop());
-                render();
-                if (checkStraightClutch()) return;
-            }
-
-            let topCard = playPile[playPile.length - 1];
-            let playableIndex = cpuHand.findIndex(c => canPlay(c, topCard));
-
-            if (playableIndex !== -1) {
-                let cardElements = document.getElementById('cpu-hand').children;
-                
-                animateCardMove(cardElements[playableIndex], 'play-pile', {isBack: true}, () => {
-                    playPile.push(cpuHand.splice(playableIndex, 1)[0]);
-                    playCardSound(); // Sound for CPU play
-                    updateLog("CPU played a card.");
-                    render();
-                    if (!checkWin()) {
-                        turn = 0;
-                        setTimeout(startPlayerTurn, 800);
-                    }
-                });
-            } else {
-                updateLog("CPU cannot play. Drawing...");
-                if (centerPile.length === 0) recycleCenterPile();
-
-                setTimeout(() => {
-                    if (gameOver) return;
-                    if (centerPile.length > 0) {
-                        cpuHand.push(centerPile.pop());
-                        render();
-                        
-                        if (checkStraightClutch()) return;
-
-                        let newTopCard = playPile[playPile.length - 1];
-                        let newPlayableIndex = cpuHand.findIndex(c => canPlay(c, newTopCard));
-                        
-                        if (newPlayableIndex !== -1) {
-                            setTimeout(() => {
-                                if (gameOver) return;
-                                let updatedCardElements = document.getElementById('cpu-hand').children;
-                                animateCardMove(updatedCardElements[newPlayableIndex], 'play-pile', {isBack: true}, () => {
-                                    playPile.push(cpuHand.splice(newPlayableIndex, 1)[0]);
-                                    playCardSound(); // Sound for CPU draw-play
-                                    updateLog("CPU played drawn card.");
-                                    render();
-                                    if (!checkWin()) { turn = 0; setTimeout(startPlayerTurn, 800); }
-                                });
-                            }, 1000);
-                        } else {
-                            updateLog("CPU passes.");
-                            turn = 0;
-                            setTimeout(startPlayerTurn, 1000);
-                        }
-                    } else {
-                        updateLog("Center empty. CPU passes.");
-                        turn = 0;
-                        setTimeout(startPlayerTurn, 1000);
-                    }
-                }, 1000);
-            }
-        }, 1200);
-    }
-
-    // --- Rendering ---
     function render() {
-        // CPU Hand
         const cpuDiv = document.getElementById('cpu-hand');
         cpuDiv.innerHTML = '';
-        cpuHand.forEach(() => {
-            cpuDiv.appendChild(createCardElement({isBack: true}));
-        });
-        document.getElementById('cpu-deck-count').innerText = cpuDeck.length;
+        oppHand.forEach(() => cpuDiv.appendChild(createCardElement({isBack: true})));
+        document.getElementById('cpu-deck-count').innerText = oppDeck.length;
 
-        // Play Pile
         const playDiv = document.getElementById('play-pile');
         playDiv.innerHTML = '';
-        if (playPile.length > 0) {
-            playDiv.appendChild(createCardElement(playPile[playPile.length - 1]));
-        }
+        if (playPile.length > 0) playDiv.appendChild(createCardElement(playPile[playPile.length - 1]));
 
-        // Player Hand
         const p1Div = document.getElementById('player-hand');
         p1Div.innerHTML = '';
         let topCard = playPile[playPile.length - 1];
 
-        p1Hand.forEach((cardObj, index) => {
+        myHand.forEach((cardObj, index) => {
             let cardEl = createCardElement(cardObj);
             if (turn === 0 && !canPlay(cardObj, topCard)) {
                 cardEl.classList.add('disabled');
             } else if (turn === 0) {
-                cardEl.onclick = () => playPlayerCard(index);
+                cardEl.onclick = () => window.playPlayerCard(index);
             }
             p1Div.appendChild(cardEl);
         });
         
-        document.getElementById('player-deck-count').innerText = p1Deck.length;
+        document.getElementById('player-deck-count').innerText = myDeck.length;
         document.getElementById('center-count').innerText = centerPile.length;
     }
 
     function createCardElement(cardObj) {
         let card = document.createElement('div');
-        if (cardObj.isBack) {
-            card.className = 'card back';
-            return card;
-        }
-
+        if (cardObj.isBack) { card.className = 'card back'; return card; }
         if (cardObj.isJoker) {
             card.className = `card ${cardObj.color}`;
             card.innerHTML = '🃏<br>JOK';
@@ -740,9 +838,10 @@
         return card;
     }
 
-    function updateLog(msg) {
-        document.getElementById('log').innerText = msg;
-    }
+    function updateLog(msg) { if(msg) document.getElementById('log').innerText = msg; }
+    
+    // Init stats on boot
+    window.updateStatsDisplay();
 
 </script>
 </body>
