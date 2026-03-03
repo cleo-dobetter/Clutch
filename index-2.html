@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clutch - Card Game</title>
     <style>
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -74,32 +76,13 @@
             background: rgba(0,0,0,0.3);
             padding: 15px 30px;
             border-radius: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
             font-size: 1.2rem;
         }
 
-        .stats-box span { font-weight: bold; color: #FFEB3B; }
-
-        .mode-selector {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            background: rgba(0,0,0,0.3);
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-        }
-
-        .mode-selector label {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .mode-selector input[type="radio"] {
-            transform: scale(1.2);
-            accent-color: #FFEB3B;
+        .stats-box span {
+            font-weight: bold;
+            color: #FFEB3B;
         }
 
         .button-group {
@@ -125,7 +108,9 @@
             transform: translateY(-2px);
         }
 
-        button:active:not(:disabled) { transform: translateY(0); }
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
 
         button:disabled {
             background-color: #9E9E9E;
@@ -206,7 +191,6 @@
             color: #FFEB3B;
             min-height: 25px;
             margin-bottom: 10px;
-            transition: color 0.3s;
         }
         
         .deck-counter {
@@ -237,12 +221,6 @@
         <div class="stats-box">
             Record: <span id="wins-display">0</span> Wins - <span id="losses-display">0</span> Losses
         </div>
-        
-        <div class="mode-selector">
-            <label><input type="radio" name="gameMode" value="standard" checked> Standard</label>
-            <label><input type="radio" name="gameMode" value="straight"> Straight Clutch</label>
-        </div>
-
         <div class="button-group">
             <button onclick="startGame()">Start Game</button>
             <button onclick="showRules()" style="background-color: #4CAF50;">How to Play</button>
@@ -264,8 +242,6 @@
                         <li>If you <em>still</em> cannot play after drawing, your turn passes.</li>
                     </ul>
                 </li>
-                <hr style="border-color: rgba(255,255,255,0.2); margin: 15px 0;">
-                <li><strong style="color: #FFEB3B;">Straight Clutch Mode:</strong> If you ever have a 5-card Straight in your hand at any point, you instantly win the game! Jokers can act as any card in the straight, and straights can wrap around (e.g., Q-K-A-2-3).</li>
             </ul>
         </div>
         <button onclick="hideRules()">Back to Menu</button>
@@ -309,8 +285,7 @@
     let turn = 0; 
     let hasDrawnFromCenter = false;
     let gameOver = false;
-    let isAnimating = false; 
-    let currentGameMode = "standard";
+    let isAnimating = false; // Prevents clicking during animations
 
     // --- Local Storage Stats ---
     let wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
@@ -341,57 +316,15 @@
     }
 
     function startGame() {
-        currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
         document.getElementById('start-screen').style.display = 'none';
         document.getElementById('game-screen').style.display = 'flex';
         initGame();
-    }
-
-    // --- Straight Logic ---
-    function isStraight(hand) {
-        if (hand.length < 5) return false;
-        
-        let naturals = hand.filter(c => !c.isJoker).map(c => c.value);
-        
-        // If a hand has duplicate natural values, it can't form a 5-card straight
-        if (new Set(naturals).size !== naturals.length) return false;
-
-        // Check every possible starting point for a straight (1 to 13)
-        // This naturally handles wrapping (e.g. 12, 13, 1, 2, 3)
-        for (let start = 1; start <= 13; start++) {
-            let neededValues = [];
-            for (let i = 0; i < 5; i++) {
-                let val = start + i;
-                if (val > 13) val -= 13; // Wrap around
-                neededValues.push(val);
-            }
-            
-            // Check if every natural card we hold fits into this specific 5-card window
-            let allMatch = naturals.every(val => neededValues.includes(val));
-            if (allMatch) return true; // Jokers fill the empty gaps perfectly
-        }
-        return false;
-    }
-
-    function checkStraightClutch() {
-        if (currentGameMode !== "straight") return false;
-
-        if (isStraight(p1Hand)) {
-            handleEndGame(true, "straight");
-            return true;
-        }
-        if (isStraight(cpuHand)) {
-            handleEndGame(false, "straight");
-            return true;
-        }
-        return false;
     }
 
     // --- Initialization ---
     function initGame() {
         gameOver = false;
         isAnimating = false;
-        document.getElementById('log').style.color = '#FFEB3B';
         mainDeck = []; playPile = []; centerPile = []; p1Hand = []; cpuHand = [];
 
         for (let s of SUITS) {
@@ -412,15 +345,11 @@
         centerPile = mainDeck; 
         playPile.push(centerPile.pop()); 
 
-        render();
-
-        // Check for instant straight off the deal
-        if (checkStraightClutch()) return;
-
         turn = Math.random() < 0.5 ? 0 : 1;
         updateLog(turn === 0 ? "You won the toss! Your turn." : "CPU won the toss. CPU goes first.");
         
-        if (turn === 0) setTimeout(startPlayerTurn, 1000);
+        render();
+        if (turn === 0) startPlayerTurn();
         else setTimeout(cpuTurn, 1500);
     }
 
@@ -450,7 +379,7 @@
 
         startEl.style.opacity = '0'; 
         document.body.appendChild(clone);
-        clone.offsetWidth; 
+        clone.offsetWidth; // Force reflow
 
         let destRect = targetContainer.lastChild ? targetContainer.lastChild.getBoundingClientRect() : targetContainer.getBoundingClientRect();
 
@@ -488,34 +417,22 @@
         }
     }
 
-    function handleEndGame(didPlayerWin, reason = "empty") {
+    function handleEndGame(didPlayerWin) {
         gameOver = true;
-        let logEl = document.getElementById('log');
-        
         if (didPlayerWin) {
-            if (reason === "straight") {
-                logEl.style.color = '#00E676';
-                updateLog("🏆 INSTANT WIN! YOU HIT A STRAIGHT CLUTCH! 🏆");
-            } else {
-                updateLog("🎉 YOU WIN! You ran out of cards! 🎉");
-            }
+            updateLog("🎉 YOU WIN! 🎉");
             wins++; localStorage.setItem('clutch_wins', wins);
         } else {
-            if (reason === "straight") {
-                logEl.style.color = '#FF1744';
-                updateLog("💀 CPU INSTANT WIN! CPU HIT A STRAIGHT CLUTCH! 💀");
-            } else {
-                updateLog("💀 CPU WINS! CPU ran out of cards! 💀");
-            }
+            updateLog("💀 CPU WINS! 💀");
             losses++; localStorage.setItem('clutch_losses', losses);
         }
         render();
-        setTimeout(showStartScreen, 4500); 
+        setTimeout(showStartScreen, 3500); 
     }
 
     function checkWin() {
-        if (p1Hand.length === 0 && p1Deck.length === 0) { handleEndGame(true, "empty"); return true; }
-        if (cpuHand.length === 0 && cpuDeck.length === 0) { handleEndGame(false, "empty"); return true; }
+        if (p1Hand.length === 0 && p1Deck.length === 0) { handleEndGame(true); return true; }
+        if (cpuHand.length === 0 && cpuDeck.length === 0) { handleEndGame(false); return true; }
         return false;
     }
 
@@ -527,18 +444,15 @@
         if (p1Hand.length < 5 && p1Deck.length > 0) {
             p1Hand.push(p1Deck.pop());
             updateLog("Your turn. Auto-drew 1 card.");
-            render();
-            if (checkStraightClutch()) return;
         } else {
             updateLog("Your turn.");
-            render();
         }
 
+        render();
         evaluatePlayerMoves();
     }
 
     function evaluatePlayerMoves() {
-        if (gameOver) return;
         let topCard = playPile[playPile.length - 1];
         let hasPlayableCard = p1Hand.some(c => canPlay(c, topCard));
         let drawBtn = document.getElementById('btn-draw-center');
@@ -581,8 +495,6 @@
             hasDrawnFromCenter = true;
             updateLog("You drew from the center.");
             render();
-            
-            if (checkStraightClutch()) return;
             evaluatePlayerMoves();
         } else {
             updateLog("Center pile empty! Turn passed.");
@@ -607,8 +519,7 @@
             if (gameOver) return;
             if (cpuHand.length < 5 && cpuDeck.length > 0) {
                 cpuHand.push(cpuDeck.pop());
-                render();
-                if (checkStraightClutch()) return;
+                render(); // Render early so we have the new card element to animate if needed
             }
 
             let topCard = playPile[playPile.length - 1];
@@ -616,6 +527,7 @@
 
             if (playableIndex !== -1) {
                 let cardElements = document.getElementById('cpu-hand').children;
+                let cardToPlay = cpuHand[playableIndex];
                 
                 animateCardMove(cardElements[playableIndex], 'play-pile', {isBack: true}, () => {
                     playPile.push(cpuHand.splice(playableIndex, 1)[0]);
@@ -636,8 +548,6 @@
                         cpuHand.push(centerPile.pop());
                         render();
                         
-                        if (checkStraightClutch()) return;
-
                         let newTopCard = playPile[playPile.length - 1];
                         let newPlayableIndex = cpuHand.findIndex(c => canPlay(c, newTopCard));
                         
