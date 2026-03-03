@@ -322,7 +322,7 @@
         const cardSfx = new Audio('sounds/cardplay.mp3');
         
         // Skip the first 0.5 seconds of silence in the MP3
-        cardSfx.currentTime = 0.5; 
+        cardSfx.currentTime = 0.2; 
         
         cardSfx.play().catch(e => console.log("Sound effect blocked:", e));
     }
