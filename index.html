@@ -17,38 +17,30 @@
             height: 100vh;
             width: 100vw;
             overflow: hidden; 
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            background: radial-gradient(circle, #2E7D32 0%, #1B5E20 100%);
         }
 
         /* --- Screens --- */
-        #start-screen, #rules-screen, #multiplayer-screen, #waiting-screen {
-            display: flex;
+        .screen {
+            display: none; /* Everything is hidden by default */
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+        }
+
+        .screen.active {
+            display: flex; /* Only the active screen is drawn */
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100%;
-            width: 100%;
-            background: radial-gradient(circle, #2E7D32 0%, #1B5E20 100%);
-            padding: 20px;
-            position: absolute;
-            top: 0; left: 0; z-index: 10;
         }
 
-        #game-screen {
-            display: none; 
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-            max-width: 900px;
+        /* Unique layout for the active game board */
+        #game-screen.active {
             justify-content: space-evenly;
-            padding: 10px;
-            z-index: 5;
+            max-width: 900px;
+            margin: 0 auto;
         }
-
-        .hidden { display: none !important; }
 
         .rules-content {
             background: rgba(0,0,0,0.6);
@@ -186,7 +178,7 @@
 </head>
 <body>
 
-    <div id="start-screen">
+    <div id="start-screen" class="screen">
         <h1>Clutch</h1>
         <div class="stats-box">Record: <span id="wins-display">0</span> Wins - <span id="losses-display">0</span> Losses</div>
         
@@ -202,7 +194,7 @@
         </div>
     </div>
 
-    <div id="multiplayer-screen" class="hidden">
+    <div id="multiplayer-screen" class="screen">
         <h1>Online Play</h1>
         <button onclick="hostRoom()" style="background-color: #E64A19; width: 250px;">Host a Room</button>
         <div style="margin: 20px 0; font-weight: bold;">OR</div>
@@ -211,14 +203,14 @@
         <button onclick="showStartScreen()" style="background-color: #9E9E9E; margin-top: 30px;">Back</button>
     </div>
 
-    <div id="waiting-screen" class="hidden">
+    <div id="waiting-screen" class="screen">
         <h2>Waiting for Opponent...</h2>
         <div id="room-code-display">----</div>
         <p>Give this code to your friend to join!</p>
         <button onclick="cancelMatchmaking()" style="background-color: #D32F2F; margin-top: 30px;">Cancel</button>
     </div>
 
-    <div id="rules-screen" class="hidden">
+    <div id="rules-screen" class="screen">
         <div class="rules-content">
             <h2>How to Play Clutch</h2>
             <ul>
@@ -234,7 +226,7 @@
         <button onclick="showStartScreen()">Back to Menu</button>
     </div>
 
-    <div id="game-screen">
+    <div id="game-screen" class="screen">
         <div class="board-section">
             <div class="info" id="opp-name">Opponent</div>
             <div id="cpu-hand" class="cards-container"></div>
@@ -266,7 +258,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
 
 <script>
-    // --- Firebase Initialization ---
+    // --- Firebase Safety Initialization ---
     const firebaseConfig = {
       apiKey: "AIzaSyBJUp46XMkw_9Kfus8C0kOv1Zt5XCT6I9Y",
       authDomain: "clutch-card-game.firebaseapp.com",
@@ -277,8 +269,15 @@
       appId: "1:707935749617:web:1cbc184730e9eb0bdcf050"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    let db = null;
+    if (typeof firebase !== 'undefined') {
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch (e) {
+            console.error("Firebase init failed:", e);
+        }
+    }
 
     // --- Game Constants & Variables ---
     const SUITS = ['♠', '♥', '♦', '♣'];
@@ -287,7 +286,7 @@
     let mainDeck = [], myDeck = [], oppDeck = [];
     let myHand = [], oppHand = [], playPile = [], centerPile = [];
     
-    let turn = 0; // 0 = P1/Local, 1 = P2/CPU
+    let turn = 0; 
     let hasDrawnFromCenter = false;
     let gameOver = false;
     let isAnimating = false; 
@@ -310,33 +309,44 @@
         cardSfx.play().catch(e => console.log("SFX blocked:", e));
     }
 
-    let wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
-    let losses = localStorage.getItem('clutch_losses') ? parseInt(localStorage.getItem('clutch_losses')) : 0;
+    // --- Safe Local Storage ---
+    let wins = 0;
+    let losses = 0;
+    try {
+        wins = localStorage.getItem('clutch_wins') ? parseInt(localStorage.getItem('clutch_wins')) : 0;
+        losses = localStorage.getItem('clutch_losses') ? parseInt(localStorage.getItem('clutch_losses')) : 0;
+    } catch(e) { console.warn("Storage blocked by browser settings."); }
 
-    // --- UI Routing ---
+    function saveStats() {
+        try {
+            localStorage.setItem('clutch_wins', wins);
+            localStorage.setItem('clutch_losses', losses);
+        } catch(e) {}
+    }
+
+    // --- UI Routing System ---
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
     function updateStatsDisplay() {
         document.getElementById('wins-display').innerText = wins;
         document.getElementById('losses-display').innerText = losses;
     }
-    
-    function hideAllScreens() {
-        ['start-screen', 'rules-screen', 'multiplayer-screen', 'waiting-screen', 'game-screen'].forEach(id => {
-            document.getElementById(id).classList.add('hidden');
-        });
-        document.getElementById('game-screen').style.display = 'none';
+
+    function showStartScreen() { 
+        showScreen('start-screen'); 
+        updateStatsDisplay(); 
     }
 
-    function showStartScreen() {
-        hideAllScreens();
-        document.getElementById('start-screen').classList.remove('hidden');
-        updateStatsDisplay();
-    }
-
-    function showRules() { hideAllScreens(); document.getElementById('rules-screen').classList.remove('hidden'); }
-    function showMultiplayer() { hideAllScreens(); document.getElementById('multiplayer-screen').classList.remove('hidden'); }
+    function showRules() { showScreen('rules-screen'); }
+    function showMultiplayer() { showScreen('multiplayer-screen'); }
 
     // --- Multiplayer Matchmaking ---
     async function hostRoom() {
+        if (!db) return alert("Multiplayer is blocked by your browser or adblocker. Please play Local Game.");
+        
         currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
         const code = Math.random().toString(36).substring(2, 6).toUpperCase();
         currentRoomId = code;
@@ -345,20 +355,17 @@
 
         roomRef = db.ref(`rooms/${code}`);
         await roomRef.set({ status: 'waiting', mode: currentGameMode });
-        roomRef.onDisconnect().remove(); // Clean up if host drops
+        roomRef.onDisconnect().remove(); 
 
-        hideAllScreens();
+        showScreen('waiting-screen');
         document.getElementById('room-code-display').innerText = code;
-        document.getElementById('waiting-screen').classList.remove('hidden');
 
-        // Listen for P2 joining
         roomRef.on('value', (snapshot) => {
             const data = snapshot.val();
-            if (!data) return; // Room deleted
+            if (!data) return; 
             if (data.status === 'playing' && !playPile.length) {
-                // P2 joined! Host initializes the deck and pushes it.
                 bgMusic.play().catch(e => {});
-                initGame(true); // true = host init
+                initGame(true); 
             } else if (data.status === 'playing' && data.playPile) {
                 syncFromDatabase(data);
             }
@@ -366,6 +373,8 @@
     }
 
     async function joinRoom() {
+        if (!db) return alert("Multiplayer is blocked by your browser or adblocker. Please play Local Game.");
+
         const codeInput = document.getElementById('join-code').value.toUpperCase();
         if (codeInput.length !== 4) return alert("Enter a 4-letter code");
 
@@ -380,11 +389,10 @@
             roomRef.onDisconnect().remove();
 
             currentGameMode = snapshot.val().mode;
-            await roomRef.update({ status: 'playing' }); // Tell Host to deal
+            await roomRef.update({ status: 'playing' }); 
 
             bgMusic.play().catch(e => {});
-            hideAllScreens();
-            document.getElementById('game-screen').style.display = 'flex';
+            showScreen('game-screen');
             document.getElementById('opp-name').innerText = "Online Player";
             updateLog("Waiting for Host to deal...");
 
@@ -407,8 +415,7 @@
     function startGame(multiplayerFlag = false) {
         isMultiplayer = multiplayerFlag;
         currentGameMode = document.querySelector('input[name="gameMode"]:checked').value;
-        hideAllScreens();
-        document.getElementById('game-screen').style.display = 'flex';
+        showScreen('game-screen');
         document.getElementById('opp-name').innerText = "CPU Opponent";
         bgMusic.play().catch(e => {});
         initGame(false);
@@ -420,7 +427,6 @@
         document.getElementById('log').style.color = '#FFEB3B';
         mainDeck = []; playPile = []; centerPile = []; myHand = []; oppHand = [];
 
-        // Build Deck
         for (let s of SUITS) {
             for (let i = 0; i < RANKS.length; i++) {
                 mainDeck.push({ suit: s, rank: RANKS[i], value: i + 1, isJoker: false, color: (s==='♥'||s==='♦') ? 'red' : 'black' });
@@ -442,11 +448,9 @@
         turn = Math.random() < 0.5 ? 0 : 1; 
 
         if (isMultiplayer && isHostInit) {
-            hideAllScreens();
-            document.getElementById('game-screen').style.display = 'flex';
+            showScreen('game-screen');
             document.getElementById('opp-name').innerText = "Online Player";
             
-            // Push initial state to DB
             roomRef.update({
                 p1Hand: myHand, p1Deck: myDeck,
                 p2Hand: oppHand, p2Deck: oppDeck,
@@ -454,7 +458,7 @@
                 turn: turn === 0 ? 'p1' : 'p2',
                 log: turn === 0 ? "P1 goes first." : "P2 goes first."
             });
-            return; // DB listener will take over
+            return; 
         }
 
         if (!isMultiplayer) {
@@ -558,11 +562,11 @@
         if (didIWin) {
             if (reason === "straight") { logEl.style.color = '#00E676'; updateLog("🏆 INSTANT WIN! STRAIGHT CLUTCH! 🏆"); } 
             else { updateLog("🎉 YOU WIN! You ran out of cards! 🎉"); }
-            wins++; localStorage.setItem('clutch_wins', wins);
+            wins++; saveStats();
         } else {
             if (reason === "straight") { logEl.style.color = '#FF1744'; updateLog("💀 OPPONENT WIN! STRAIGHT CLUTCH! 💀"); } 
             else { updateLog("💀 OPPONENT WINS! 💀"); }
-            losses++; localStorage.setItem('clutch_losses', losses);
+            losses++; saveStats();
         }
         render();
         
@@ -837,8 +841,8 @@
 
     function updateLog(msg) { if(msg) document.getElementById('log').innerText = msg; }
     
-    // Init stats on boot
-    updateStatsDisplay();
+    // Boot up the UI properly
+    showStartScreen();
 
 </script>
 </body>
